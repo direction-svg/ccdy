@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Workout">
+<meta name="theme-color" content="#0C0F14">
+<title>Workout Tracker</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#0C0F14;--card:#161B22;--card2:#1C2333;--border:#2A3040;
+--accent:#FF3B5C;--accentDim:rgba(255,59,92,0.2);
+--green:#00E676;--greenDim:rgba(0,230,118,0.2);
+--blue:#4DA6FF;--blueDim:rgba(77,166,255,0.2);
+--orange:#FF9100;--teal:#1DE9B6;--purple:#B388FF;
+--text:#E8ECF4;--textMid:#8B95A8;--textDim:#4A5568;
+--safe-top:env(safe-area-inset-top,0px);
+--safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html,body{background:var(--bg);color:var(--text);font-family:-apple-system,'SF Pro Text','Helvetica Neue',sans-serif;min-height:100vh;min-height:-webkit-fill-available;overflow-x:hidden;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent}
+body{padding-top:var(--safe-top);padding-bottom:var(--safe-bottom)}
+button{font-family:inherit;-webkit-tap-highlight-color:transparent}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes ringPulse{0%{filter:drop-shadow(0 0 0 var(--accent))}50%{filter:drop-shadow(0 0 12px var(--accent))}100%{filter:drop-shadow(0 0 0 var(--accent))}}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+.fade-in{animation:fadeIn .3s ease both}
+.slide-up{animation:slideUp .3s cubic-bezier(.32,.72,0,1) both}
+::-webkit-scrollbar{width:0;display:none}
+.timer-ring{animation:ringPulse 2s ease-in-out infinite}
+.timer-done .timer-ring{animation:pulse .6s ease 2}
+.day-card{display:flex;align-items:center;width:100%;padding:16px;margin-bottom:8px;background:var(--card);border:1px solid var(--border);border-radius:14px;cursor:pointer;text-align:left;transition:transform .15s,border-color .3s;-webkit-appearance:none;appearance:none}
+.day-card:active{transform:scale(.97)}
+.day-card.done{opacity:.55;border-color:rgba(0,230,118,.25)}
+.ex-card{background:var(--card);border-radius:14px;padding:14px 16px;margin-bottom:10px;border:1px solid var(--border);transition:border-color .3s,opacity .3s}
+.ex-card.done{border-color:rgba(0,230,118,.25);opacity:.6}
+.ex-card.done .ex-name{text-decoration:line-through;color:var(--green)}
+.set-btn{width:40px;height:40px;border-radius:10px;border:2px solid var(--border);background:var(--card2);color:var(--textDim);font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0}
+.set-btn.checked{border-color:var(--green);background:var(--greenDim);color:var(--green)}
+.set-btn:active{transform:scale(.9)}
+.act-btn{width:34px;height:34px;border-radius:8px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;transition:transform .15s}
+.act-btn:active{transform:scale(.85)}
+.timer-btn{margin-left:auto;background:var(--accentDim);border:none;border-radius:10px;padding:8px 12px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:4px;flex-shrink:0;font-family:'SF Mono','Menlo',monospace}
+.timer-btn:active{transform:scale(.93)}
+.progress-track{height:4px;background:var(--card2);border-radius:2px;overflow:hidden}
+.progress-fill{height:100%;border-radius:2px;transition:width .5s ease}
+.overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:32px;background:rgba(0,0,0,.88);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px)}
+.drawer-overlay{position:fixed;inset:0;z-index:90;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.6)}
+.drawer{background:var(--card);border-radius:20px 20px 0 0;padding:20px 20px calc(20px + var(--safe-bottom));width:100%;max-width:500px}
+.drawer-handle{width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 16px}
+.sticky-header{position:sticky;top:0;z-index:50;background:var(--bg);border-bottom:1px solid var(--border);padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+.done-banner{position:fixed;bottom:0;left:0;right:0;padding:16px;padding-bottom:calc(16px + var(--safe-bottom));text-align:center;z-index:50;font-size:17px;font-weight:800;color:var(--bg);background:linear-gradient(135deg,var(--green),var(--teal))}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+<script type="text/babel">
+const{useState,useEffect,useRef,useCallback}=React;
+const WEEK=[
+{day:"Lundi",label:"PUSH",sub:"Pectoraux · Épaules · Triceps",icon:"\u{1F4AA}",color:"#FF3B5C",exercises:[
+{name:"Développé couché barre",sets:4,reps:"8-10",rest:120,muscles:"Pectoraux, triceps",variants:["DC haltères","DC Smith Machine"],tip:"Descendre au niveau des tétons, coudes ~75°."},
+{name:"Développé incliné haltères",sets:3,reps:"10-12",rest:90,muscles:"Haut pectoraux",variants:["Incliné barre","Machine convergente"],tip:"Inclinaison 30-45°. Faisceau claviculaire."},
+{name:"Écarté poulie vis-à-vis",sets:3,reps:"12-15",rest:60,muscles:"Pectoraux stretch",variants:["Écarté haltères plat","Pec deck"],tip:"Étirement max, presser en fin de mouvement."},
+{name:"Développé militaire haltères",sets:4,reps:"8-10",rest:90,muscles:"Deltoïdes",variants:["Militaire barre","Shoulder press machine"],tip:"Core engagé, ne pas cambrer."},
+{name:"Élévations latérales",sets:3,reps:"12-15",rest:60,muscles:"Deltoïdes lat.",variants:["Élévations poulie basse","Élévations machine"],tip:"Légère inclinaison buste, monter à l'horizontale."},
+{name:"Dips (lesté)",sets:3,reps:"8-12",rest:90,muscles:"Triceps, pecs bas",variants:["Dips assistée","Skull crushers EZ"],tip:"Buste droit=triceps. Penché=pecs."},
+{name:"Extension triceps poulie corde",sets:3,reps:"12-15",rest:60,muscles:"Triceps",variants:["Extension barre droite","Kickback haltère"],tip:"Écarter la corde en bas."},
+]},
+{day:"Mardi",label:"ENDURANCE",sub:"Course · Zone 2",icon:"\u{1F3C3}",color:"#4DA6FF",exercises:[
+{name:"Échauffement",sets:1,reps:"10 min",rest:0,muscles:"—",variants:[],tip:"5 min marche rapide + 5 min footing léger."},
+{name:"Footing endurance fondamentale",sets:1,reps:"40-50 min",rest:0,muscles:"Cardio",variants:[],tip:"Zone 2 (65-75% FCmax). Pouvoir tenir une conversation."},
+{name:"Retour au calme + étirements",sets:1,reps:"5 min",rest:0,muscles:"—",variants:[],tip:"Marche + étirements quads, mollets, ischios."},
+]},
+{day:"Mercredi",label:"PULL",sub:"Dos · Biceps · Arr. épaules",icon:"\u{1F3CB}\uFE0F",color:"#FF9100",exercises:[
+{name:"Tractions pronation (lestées)",sets:4,reps:"6-10",rest:120,muscles:"Dorsal, biceps",variants:["Tirage poulie haute large","Tractions assistées"],tip:"Amplitude complète."},
+{name:"Rowing barre buste penché",sets:4,reps:"8-10",rest:120,muscles:"Dos épaisseur",variants:["Rowing haltère un bras","Rowing T-bar"],tip:"Buste 45°, tirer vers nombril, serrer omoplates."},
+{name:"Tirage horizontal poulie basse",sets:3,reps:"10-12",rest:90,muscles:"Dos milieu",variants:["Rowing Hammer Strength","Rowing haltères bilat."],tip:"Prise neutre/V. Pas de balancement."},
+{name:"Face pull poulie corde",sets:3,reps:"15-20",rest:60,muscles:"Deltoïdes post.",variants:["Oiseau haltères","Reverse pec deck"],tip:"Rotation externe en haut du mouvement."},
+{name:"Curl barre EZ",sets:3,reps:"10-12",rest:60,muscles:"Biceps",variants:["Curl barre droite","Curl haltères debout"],tip:"Coudes fixes, pas de balancement."},
+{name:"Curl incliné haltères",sets:3,reps:"10-12",rest:60,muscles:"Biceps longue portion",variants:["Curl pupitre","Curl poulie basse"],tip:"Banc 45°, étirement max en bas."},
+{name:"Curl marteau",sets:3,reps:"10-12",rest:60,muscles:"Brachial",variants:["Curl marteau poulie corde","Curl inversé barre"],tip:"Développe le brachial."},
+]},
+{day:"Jeudi",label:"FRACTIONNÉ",sub:"Course · VO2max",icon:"\u{1F525}",color:"#FF3B5C",exercises:[
+{name:"Échauffement progressif",sets:1,reps:"10 min",rest:0,muscles:"—",variants:[],tip:"5 min léger + 5 min modéré + accélérations."},
+{name:"Fractionné 30/30",sets:2,reps:"8 rép./bloc",rest:180,muscles:"VO2max",variants:["200m récup 200m (×8-10)","Pyramide 200-600-200m"],tip:"30s à 90-95% FCmax / 30s récup. 3 min entre blocs."},
+{name:"Retour au calme",sets:1,reps:"8-10 min",rest:0,muscles:"—",variants:[],tip:"Footing très léger puis marche."},
+]},
+{day:"Vendredi",label:"LEGS",sub:"Quads · Ischios · Fessiers · Mollets",icon:"\u{1F9B5}",color:"#1DE9B6",exercises:[
+{name:"Squat barre",sets:4,reps:"6-8",rest:150,muscles:"Quads, fessiers",variants:["Squat Smith Machine","Leg press 45°"],tip:"Minimum parallèle."},
+{name:"Fentes marchées haltères",sets:3,reps:"10/jambe",rest:90,muscles:"Quads, fessiers",variants:["Fentes bulgares","Fentes Smith Machine"],tip:"Grand pas, genou arrière frôle le sol."},
+{name:"Leg extension",sets:3,reps:"12-15",rest:60,muscles:"Quads isolation",variants:["Sissy squat","Extension poulie cheville"],tip:"Contracter en haut, excentrique lente."},
+{name:"Romanian deadlift barre",sets:4,reps:"8-10",rest:120,muscles:"Ischios, fessiers",variants:["RDL haltères","RDL unilatéral"],tip:"Barre proche des jambes."},
+{name:"Leg curl allongé",sets:3,reps:"10-12",rest:60,muscles:"Ischios isolation",variants:["Leg curl assis","Leg curl poulie"],tip:"Excentrique contrôlée."},
+{name:"Hip thrust barre",sets:3,reps:"10-12",rest:90,muscles:"Grand glutéal",variants:["Hip thrust machine","Pont fessier lesté"],tip:"Contracter fort 1-2s en haut."},
+{name:"Mollets debout",sets:4,reps:"12-15",rest:60,muscles:"Mollets",variants:["Mollets presse","Mollets sur marche"],tip:"Amplitude complète, tempo lent."},
+]},
+{day:"Samedi",label:"UPPER bis",sub:"Rappel Pecs · Dos · Bras",icon:"\u{1F4AA}",color:"#B388FF",exercises:[
+{name:"Développé couché haltères",sets:4,reps:"10-12",rest:90,muscles:"Pectoraux, triceps",variants:["DC prise serrée","Floor press"],tip:"Plus léger, focus connexion muscle-cerveau."},
+{name:"Pullover poulie haute",sets:3,reps:"12-15",rest:60,muscles:"Dorsal, pecs",variants:["Pullover haltère banc","Pullover machine"],tip:"Stretch dos + pecs."},
+{name:"Rowing poulie un bras",sets:3,reps:"10-12/côté",rest:60,muscles:"Dos milieu",variants:["Rowing haltère un bras","Tirage neutre serré"],tip:"Contraction unilatérale."},
+{name:"Écarté incliné haltères",sets:3,reps:"12-15",rest:60,muscles:"Haut pectoraux",variants:["Écarté poulie basse incliné","Pec deck inclinée"],tip:"Léger, focus stretch/squeeze."},
+{name:"SS: Curl barre + Ext. nuque",sets:3,reps:"10-12 chaque",rest:60,muscles:"Biceps + Triceps",variants:["Curl poulie + Pushdown","Curl concentration + Overhead"],tip:"Superset = congestion max."},
+{name:"SS: Curl marteau + Dips banc",sets:3,reps:"10-12 chaque",rest:60,muscles:"Brachial + Triceps",variants:["Curl araignée + Skull crusher","Curl poulie + Triceps corde"],tip:"Finisher bras."},
+{name:"Shrugs haltères",sets:3,reps:"12-15",rest:60,muscles:"Trapèzes",variants:["Shrugs barre","Shrugs Smith Machine"],tip:"Épaules vers oreilles, 1s en haut."},
+]},
+{day:"Dimanche",label:"REPOS / JJB",sub:"Jiu-Jitsu optionnel",icon:"\u{1F94B}",color:"#8B95A8",exercises:[
+{name:"Jiu-Jitsu (optionnel)",sets:1,reps:"60-90 min",rest:0,muscles:"Full body, grip",variants:[],tip:"Grip, core, explosivité, souplesse. Glucides avant."},
+{name:"Récupération active",sets:1,reps:"20-30 min",rest:0,muscles:"—",variants:[],tip:"Marche, foam rolling, étirements, yoga léger."},
+]},
+];
+
+const fmt=(s)=>{const m=Math.floor(s/60);const sec=s%60;return m+':'+String(sec).padStart(2,'0')};
+const SK="wk_state_v3";
+function loadSt(){try{const r=localStorage.getItem(SK);if(r)return JSON.parse(r)}catch(e){}return null}
+function saveSt(s){try{localStorage.setItem(SK,JSON.stringify(s))}catch(e){}}
+function initC(){const s={};WEEK.forEach((d,di)=>d.exercises.forEach((ex,ei)=>{s[di+'-'+ei]=Array(ex.sets).fill(false)}));return s}
+
+function RestTimer({seconds,onClose}){
+  const[left,setLeft]=useState(seconds);
+  const[running,setRunning]=useState(true);
+  const ref=useRef(null);
+  useEffect(()=>{if(running&&left>0){ref.current=setInterval(()=>setLeft(p=>p-1),1000)}return()=>clearInterval(ref.current)},[running,left]);
+  useEffect(()=>{if(left<=0&&running){setRunning(false);try{navigator.vibrate&&navigator.vibrate([200,100,200,100,200])}catch(e){}}},[left,running]);
+  const pct=Math.max(0,left/seconds),r=58,circ=2*Math.PI*r,done=left<=0;
+  return(
+    <div className={"overlay fade-in"+(done?' timer-done':'')}>
+      <div style={{position:'relative',width:180,height:180}}>
+        <svg width="180" height="180" style={{transform:'rotate(-90deg)'}} className="timer-ring">
+          <circle cx="90" cy="90" r={r} fill="none" stroke="#2A3040" strokeWidth="7"/>
+          <circle cx="90" cy="90" r={r} fill="none" stroke={done?"#00E676":"#FF3B5C"} strokeWidth="7" strokeDasharray={circ} strokeDashoffset={circ*(1-pct)} strokeLinecap="round" style={{transition:'stroke-dashoffset 1s linear, stroke .3s'}}/>
+        </svg>
+        <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center'}}>
+          <span style={{fontSize:48,fontWeight:800,color:done?'#00E676':'#fff',fontFamily:"'SF Mono','Menlo',monospace",fontVariantNumeric:'tabular-nums'}}>{fmt(Math.max(0,left))}</span>
+          <span style={{fontSize:12,color:'#8B95A8',marginTop:4,fontWeight:600,letterSpacing:2}}>{done?'GO !':'REPOS'}</span>
+        </div>
+      </div>
+      <div style={{display:'flex',gap:10,flexWrap:'wrap',justifyContent:'center'}}>
+        {!done&&<button onClick={()=>setRunning(p=>!p)} style={{background:'#1C2333',border:'1px solid #2A3040',color:'#E8ECF4',borderRadius:14,padding:'14px 22px',fontSize:16,fontWeight:600,cursor:'pointer'}}>{running?'⏸ Pause':'▶ Go'}</button>}
+        {!done&&<button onClick={()=>setLeft(p=>p+15)} style={{background:'rgba(77,166,255,.2)',border:'none',color:'#4DA6FF',borderRadius:14,padding:'14px 18px',fontSize:16,fontWeight:600,cursor:'pointer'}}>+15s</button>}
+        <button onClick={onClose} style={{background:done?'#00E676':'#FF3B5C',border:'none',color:'#0C0F14',borderRadius:14,padding:'14px 26px',fontSize:16,fontWeight:700,cursor:'pointer'}}>{done?'Série suivante →':'Passer →'}</button>
+      </div>
+    </div>
+  );
+}
+
+function VariantDrawer({variants,onClose}){
+  return(
+    <div className="drawer-overlay" onClick={onClose}>
+      <div className="drawer slide-up" onClick={e=>e.stopPropagation()}>
+        <div className="drawer-handle"/>
+        <p style={{margin:'0 0 12px',fontSize:15,fontWeight:700,color:'#E8ECF4'}}>Variantes / Alternatives</p>
+        {variants.map((v,i)=><div key={i} style={{background:'#1C2333',borderRadius:10,padding:'12px 14px',marginBottom:8,border:'1px solid #2A3040'}}><span style={{color:'#4DA6FF',marginRight:8}}>→</span><span style={{color:'#E8ECF4',fontSize:14}}>{v}</span></div>)}
+        <button onClick={onClose} style={{marginTop:8,width:'100%',padding:14,background:'#1C2333',border:'1px solid #2A3040',borderRadius:12,color:'#8B95A8',fontSize:14,fontWeight:600,cursor:'pointer'}}>Fermer</button>
+      </div>
+    </div>
+  );
+}
+
+function ExerciseRow({ex,checked,onToggleSet,dayColor}){
+  const[showTip,setShowTip]=useState(false);
+  const[showV,setShowV]=useState(false);
+  const[timer,setTimer]=useState(null);
+  const doneSets=checked.filter(Boolean).length;
+  const allDone=doneSets===ex.sets;
+  return(
+    <>
+      {timer!==null&&<RestTimer seconds={timer} onClose={()=>setTimer(null)}/>}
+      {showV&&<VariantDrawer variants={ex.variants} onClose={()=>setShowV(false)}/>}
+      <div className={"ex-card"+(allDone?' done':'')}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8}}>
+          <div style={{flex:1,minWidth:0}}>
+            <span className="ex-name" style={{fontSize:15,fontWeight:700,color:'#E8ECF4',display:'block'}}>{ex.name}</span>
+            <div style={{display:'flex',gap:6,marginTop:6,flexWrap:'wrap'}}>
+              <span style={{fontSize:11,color:dayColor,background:dayColor+'33',padding:'2px 8px',borderRadius:6,fontWeight:600}}>{ex.reps}</span>
+              <span style={{fontSize:11,color:'#8B95A8',background:'#1C2333',padding:'2px 8px',borderRadius:6}}>{ex.muscles}</span>
+            </div>
+          </div>
+          <div style={{display:'flex',gap:6,flexShrink:0}}>
+            {ex.variants.length>0&&<button className="act-btn" onClick={()=>setShowV(true)} style={{background:'rgba(77,166,255,.2)',color:'#4DA6FF'}}>↻</button>}
+            <button className="act-btn" onClick={()=>setShowTip(p=>!p)} style={{background:'#1C2333',color:'#8B95A8',border:'1px solid #2A3040'}}>{showTip?'✕':'?'}</button>
+          </div>
+        </div>
+        {showTip&&<div className="fade-in" style={{marginTop:10,padding:'10px 12px',background:'#1C2333',borderRadius:10,border:'1px solid #2A3040'}}><p style={{margin:0,fontSize:13,color:'#8B95A8',lineHeight:1.5}}>{ex.tip}</p></div>}
+        <div style={{display:'flex',alignItems:'center',gap:6,marginTop:12}}>
+          <span style={{fontSize:10,color:'#4A5568',fontWeight:700,marginRight:4,letterSpacing:1}}>SÉRIES</span>
+          {Array.from({length:ex.sets}).map((_,i)=>(
+            <button key={i} className={"set-btn"+(checked[i]?' checked':'')} onClick={()=>{onToggleSet(i);if(!checked[i]&&ex.rest>0)setTimer(ex.rest)}}>
+              {checked[i]?'✓':i+1}
+            </button>
+          ))}
+          {ex.rest>0&&<button className="timer-btn" onClick={()=>setTimer(ex.rest)}>⏱ {fmt(ex.rest)}</button>}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function App(){
+  const[sel,setSel]=useState(null);
+  const[ck,setCk]=useState(()=>loadSt()||initC());
+  useEffect(()=>{saveSt(ck)},[ck]);
+  const toggle=useCallback((di,ei,si)=>{setCk(p=>{const k=di+'-'+ei;const a=[...(p[k]||[])];a[si]=!a[si];return{...p,[k]:a}})},[]);
+  const prog=(di)=>{let t=0,d=0;WEEK[di].exercises.forEach((ex,ei)=>{t+=ex.sets;d+=(ck[di+'-'+ei]||[]).filter(Boolean).length});return t>0?d/t:0};
+  const resetDay=(di)=>{setCk(p=>{const n={...p};WEEK[di].exercises.forEach((ex,ei)=>{n[di+'-'+ei]=Array(ex.sets).fill(false)});return n})};
+  const resetAll=()=>setCk(initC());
+
+  if(sel!==null){
+    const di=sel,day=WEEK[di],p=prog(di);
+    return(
+      <div style={{maxWidth:500,margin:'0 auto',minHeight:'100vh',background:'#0C0F14'}}>
+        <div className="sticky-header">
+          <button onClick={()=>setSel(null)} style={{background:'none',border:'none',color:'#8B95A8',fontSize:26,cursor:'pointer',padding:4,lineHeight:1}}>←</button>
+          <div style={{textAlign:'center',flex:1}}>
+            <div style={{fontSize:14,fontWeight:800,color:day.color,letterSpacing:1.5}}>{day.label}</div>
+            <div style={{fontSize:11,color:'#4A5568'}}>{day.day} · {day.sub}</div>
+          </div>
+          <button onClick={()=>resetDay(di)} style={{background:'none',border:'none',color:'#4A5568',fontSize:11,cursor:'pointer',padding:4,fontWeight:600}}>Reset</button>
+        </div>
+        <div style={{padding:'12px 16px 0'}}>
+          <div style={{display:'flex',justifyContent:'space-between',marginBottom:6}}>
+            <span style={{fontSize:11,color:'#4A5568',fontWeight:600}}>Progression</span>
+            <span style={{fontSize:11,color:p>=1?'#00E676':'#8B95A8',fontWeight:700}}>{Math.round(p*100)}%</span>
+          </div>
+          <div className="progress-track" style={{height:6,borderRadius:3}}>
+            <div className="progress-fill" style={{width:(p*100)+'%',background:p>=1?'#00E676':day.color,borderRadius:3}}/>
+          </div>
+        </div>
+        <div style={{padding:'16px 16px 120px'}}>
+          {day.exercises.map((ex,ei)=><ExerciseRow key={ei} ex={ex} dayColor={day.color} checked={ck[di+'-'+ei]||[]} onToggleSet={(si)=>toggle(di,ei,si)}/>)}
+        </div>
+        {p>=1&&<div className="done-banner slide-up">🎉 Séance terminée ! Bravo !</div>}
+      </div>
+    );
+  }
+
+  return(
+    <div style={{maxWidth:500,margin:'0 auto',minHeight:'100vh',background:'#0C0F14'}}>
+      <div style={{padding:'36px 20px 12px'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
+          <div>
+            <h1 style={{margin:0,fontSize:22,fontWeight:800,letterSpacing:1.5,color:'#fff'}}>MON PROGRAMME</h1>
+            <p style={{margin:'4px 0 0',fontSize:12,color:'#4A5568'}}>Push/Pull/Legs + Upper · Course 2×/sem · JJB</p>
+          </div>
+          <button onClick={resetAll} style={{background:'#161B22',border:'1px solid #2A3040',borderRadius:10,padding:'8px 12px',color:'#4A5568',fontSize:11,fontWeight:600,cursor:'pointer',marginTop:4}}>Reset</button>
+        </div>
+      </div>
+      <div style={{padding:'0 16px 40px'}}>
+        {WEEK.map((day,di)=>{
+          const p=prog(di);
+          return(
+            <button key={di} className={"day-card"+(p>=1?' done':'')} onClick={()=>setSel(di)}>
+              <div style={{width:46,height:46,borderRadius:13,background:'#1C2333',display:'flex',alignItems:'center',justifyContent:'center',fontSize:24,flexShrink:0}}>{day.icon}</div>
+              <div style={{flex:1,marginLeft:14,minWidth:0}}>
+                <div style={{display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{fontSize:15,fontWeight:800,color:day.color}}>{day.day}</span>
+                  <span style={{fontSize:12,color:'#8B95A8',fontWeight:600}}>{day.label}</span>
+                </div>
+                <div style={{fontSize:11,color:'#4A5568',marginTop:2}}>{day.sub}</div>
+                <div className="progress-track" style={{marginTop:8}}>
+                  <div className="progress-fill" style={{width:(p*100)+'%',background:p>=1?'#00E676':day.color}}/>
+                </div>
+              </div>
+              <div style={{marginLeft:12,flexShrink:0}}>
+                {p>=1?<span style={{fontSize:24,color:'#00E676'}}>✓</span>
+                :<span style={{fontSize:12,color:'#4A5568',fontWeight:700}}>{Math.round(p*100)}%</span>}
+              </div>
+            </button>
+          );
+        })}
+      </div>
+      <div style={{textAlign:'center',padding:'12px 16px 32px',color:'#4A5568',fontSize:10,letterSpacing:.5}}>
+        Touche un jour pour commencer · Timer auto · Sauvegarde locale
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('app')).render(<App/>);
+</script>
+</body>
+</html>
