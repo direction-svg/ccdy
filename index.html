@@ -6,7 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Workout">
-<meta name="theme-color" content="#0A0D14">
+<meta name="theme-color" content="#000000">
 <title>Mon Programme Sport</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
@@ -46,7 +46,7 @@ button,input,select{font-family:var(--font-body);-webkit-tap-highlight-color:tra
 ::-webkit-scrollbar{display:none}
 @supports(padding:max(0px)){
   .safe-bot{padding-bottom:max(20px,env(safe-area-inset-bottom))}
-  .safe-top{padding-top:max(14px,env(safe-area-inset-top))}
+  .safe-top{padding-top:env(safe-area-inset-top)}
 }
 
 /* ── NAV ── */
@@ -56,14 +56,16 @@ button,input,select{font-family:var(--font-body);-webkit-tap-highlight-color:tra
   background:#000;
   border-bottom:1px solid #1a1a1a;
   padding:0 4px;
+  padding-top:env(safe-area-inset-top);
 }
 .nav-btn{
-  flex:1;padding:12px 4px 10px;background:none;
+  flex:1;padding:10px 4px 10px;background:none;
   color:var(--dim);font-size:8px;font-weight:700;
   letter-spacing:1.2px;text-transform:uppercase;
   cursor:pointer;transition:color .2s;
   display:flex;flex-direction:column;align-items:center;gap:5px;
   font-family:var(--font);
+  min-height:60px;
 }
 .nav-btn .icon{font-size:22px;line-height:1}
 .nav-btn.active{color:#fff}
@@ -1790,7 +1792,7 @@ function App(){
   const [tab,setTab]=useState(0);
   const tabs=[{l:"Séance",i:"🏋️"},{l:"Mensuel",i:"📅"},{l:"Health",i:"❤️"}];
   return h("div",{className:"app"},
-    h("div",{className:"nav safe-top"},tabs.map((t,i)=>h("button",{key:i,className:`nav-btn ${tab===i?"active":""}`,onClick:()=>setTab(i)},h("span",{className:"icon"},t.i),t.l))),
+    h("div",{className:"nav"},tabs.map((t,i)=>h("button",{key:i,className:`nav-btn ${tab===i?"active":""}`,onClick:()=>setTab(i)},h("span",{className:"icon"},t.i),t.l))),
     [h(TabSeance),h(TabMensuel),h(TabHealth)][tab]
   );
 }
