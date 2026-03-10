@@ -1692,11 +1692,18 @@ function ManualSessionPanel(){
 
 // ── TAB HEALTH ──
 function TabHealth(){
-  const [age,setAge]=useState(()=>ls("age",46));
+  // Âge calculé automatiquement à partir de la date de naissance réelle
+  function calcAge(){
+    const dob=new Date(1984,9,16); // 16 octobre 1984 (mois 0-indexé)
+    const now=new Date();
+    let age=now.getFullYear()-dob.getFullYear();
+    if(now<new Date(now.getFullYear(),9,16)) age--;
+    return age;
+  }
+  const age=calcAge();
   const fcmax=220-age;
   const fileRef=useRef(null);
   const [importMsg,setImportMsg]=useState("");
-  function updateAge(v){const a=parseInt(v)||46;setAge(a);lsSet("age",a);}
 
   function exportData(){
     const data={};
@@ -1761,11 +1768,14 @@ function TabHealth(){
       h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}},
         h("div",null,
           h("div",{style:{fontSize:"11px",color:"var(--dim)",fontWeight:700,marginBottom:6}},"TON ÂGE"),
-          h("input",{className:"serie-input",value:age,inputMode:"numeric",onChange:e=>updateAge(e.target.value)})
+          h("div",{className:"serie-input",style:{display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,200,255,.06)",borderColor:"rgba(0,200,255,.15)",color:"var(--cyan)",fontWeight:900,gap:6}},
+            age+" ans",
+            h("span",{style:{fontSize:9,color:"var(--dim)",fontWeight:600,marginLeft:4}},"auto ✓")
+          )
         ),
         h("div",null,
           h("div",{style:{fontSize:"11px",color:"var(--dim)",fontWeight:700,marginBottom:6}},"FC MAX"),
-          h("div",{className:"serie-input",style:{display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(255,59,92,.1)",borderColor:"rgba(255,59,92,.3)",color:"var(--red)",fontWeight:900}},fcmax+" bpm")
+          h("div",{className:"serie-input",style:{display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(255,45,85,.08)",borderColor:"rgba(255,45,85,.2)",color:"var(--red)",fontWeight:900}},fcmax+" bpm")
         )
       )
     ),
