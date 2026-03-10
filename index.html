@@ -844,6 +844,128 @@ function AddExPanel({dk,extraGroups,setExtraGroups,onStartTimer}){
   );
 }
 
+// ── APPLE WATCH PANEL ──
+function WatchPanel({fcMoy,fcMax,cals,hrv,duree,onChangeFcMoy,onChangeFcMax,onChangeCals,onChangeHrv,onChangeDuree}){
+  const [open,setOpen]=useState(false);
+  const hasData=fcMoy||fcMax||cals||hrv||duree;
+  // FC zone color
+  const fcColor=fcMoy>=160?"#FF3B5C":fcMoy>=140?"#FF8C42":fcMoy>=120?"#0A84FF":"#30D158";
+  // HRV color
+  const hrvColor=hrv>=50?"#30D158":hrv>=30?"#FF8C42":"#FF3B5C";
+
+  return h("div",{style:{background:"var(--card)",border:"1px solid var(--border)",borderRadius:"var(--radius-sm)",marginBottom:12,overflow:"hidden"}},
+    // Header — toujours visible
+    h("div",{
+      onClick:()=>setOpen(p=>!p),
+      style:{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",cursor:"pointer"}
+    },
+      h("span",{style:{fontSize:20,flexShrink:0}},"⌚"),
+      h("div",{style:{flex:1}},
+        h("div",{style:{fontSize:13,fontWeight:800,color:"var(--txt)"}},
+          "Données Apple Watch",
+          hasData&&h("span",{style:{marginLeft:8,fontSize:10,background:"rgba(48,209,88,.15)",color:"var(--green)",padding:"2px 6px",borderRadius:5,fontWeight:700}},"Rempli ✓")
+        ),
+        hasData
+          ? h("div",{style:{fontSize:11,color:"var(--dim)",marginTop:2,display:"flex",gap:10,flexWrap:"wrap"}},
+              fcMoy&&h("span",{style:{color:fcColor}},"🫀 "+fcMoy+" bpm moy"),
+              fcMax&&h("span",{style:{color:"var(--red)"}},fcMax+" max"),
+              cals&&h("span",{style:{color:"var(--orange)"}},cals+" kcal Watch"),
+              hrv&&h("span",{style:{color:hrvColor}},"HRV "+hrv+" ms"),
+              duree&&h("span",{style:{color:"var(--blue)"}},"⏱ "+duree+" min")
+            )
+          : h("div",{style:{fontSize:11,color:"var(--dim)",marginTop:2}},"Appuie pour saisir FC, calories, HRV…")
+      ),
+      h("span",{style:{color:"var(--dim)",fontSize:16,transition:"transform .2s",transform:open?"rotate(180deg)":"rotate(0deg)",flexShrink:0}},"⌄")
+    ),
+
+    // Formulaire dépliable
+    open&&h("div",{style:{padding:"0 14px 16px",borderTop:"1px solid var(--border)"}},
+
+      // Tip
+      h("div",{style:{marginTop:12,marginBottom:14,padding:"10px 12px",background:"rgba(10,132,255,.06)",border:"1px solid rgba(10,132,255,.1)",borderRadius:10,fontSize:12,color:"var(--teal)",lineHeight:1.5}},
+        "💡 Après ta séance : ouvre l'app ",h("strong",null,"Activité"),
+        " sur l'Apple Watch → appuie sur la séance → tu verras FC, calories et durée. Pour l'HRV, c'est dans l'app ",h("strong",null,"Santé")," → Fréquence cardiaque → VFC."
+      ),
+
+      // Grille 2 colonnes
+      h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}},
+
+        // FC Moyenne
+        h("div",null,
+          h("div",{style:{fontSize:10,fontWeight:800,color:"var(--dim)",marginBottom:5,textTransform:"uppercase",letterSpacing:".4px"}},"🫀 FC Moyenne (bpm)"),
+          h("input",{
+            className:"serie-input",inputMode:"numeric",placeholder:"ex: 142",
+            value:fcMoy,
+            onChange:e=>onChangeFcMoy(e.target.value),
+            style:{borderColor:fcMoy?fcColor:"var(--border)"}
+          })
+        ),
+
+        // FC Max
+        h("div",null,
+          h("div",{style:{fontSize:10,fontWeight:800,color:"var(--dim)",marginBottom:5,textTransform:"uppercase",letterSpacing:".4px"}},"❤️ FC Max (bpm)"),
+          h("input",{
+            className:"serie-input",inputMode:"numeric",placeholder:"ex: 178",
+            value:fcMax,
+            onChange:e=>onChangeFcMax(e.target.value),
+            style:{borderColor:fcMax?"var(--red)":"var(--border)"}
+          })
+        ),
+
+        // Calories Watch
+        h("div",null,
+          h("div",{style:{fontSize:10,fontWeight:800,color:"var(--dim)",marginBottom:5,textTransform:"uppercase",letterSpacing:".4px"}},"🔥 Calories actives (kcal)"),
+          h("input",{
+            className:"serie-input",inputMode:"numeric",placeholder:"ex: 380",
+            value:cals,
+            onChange:e=>onChangeCals(e.target.value),
+            style:{borderColor:cals?"var(--orange)":"var(--border)"}
+          })
+        ),
+
+        // Durée
+        h("div",null,
+          h("div",{style:{fontSize:10,fontWeight:800,color:"var(--dim)",marginBottom:5,textTransform:"uppercase",letterSpacing:".4px"}},"⏱ Durée (min)"),
+          h("input",{
+            className:"serie-input",inputMode:"numeric",placeholder:"ex: 62",
+            value:duree,
+            onChange:e=>onChangeDuree(e.target.value),
+            style:{borderColor:duree?"var(--blue)":"var(--border)"}
+          })
+        )
+      ),
+
+      // HRV pleine largeur + explication
+      h("div",null,
+        h("div",{style:{fontSize:10,fontWeight:800,color:"var(--dim)",marginBottom:5,textTransform:"uppercase",letterSpacing:".4px"}},
+          "💜 HRV — Variabilité cardiaque (ms)",
+          h("span",{style:{marginLeft:6,fontSize:9,color:"var(--purple)",fontWeight:600}},"→ met à jour le score récupération")
+        ),
+        h("input",{
+          className:"serie-input",inputMode:"numeric",placeholder:"ex: 45  (trouvé dans Santé → VFC)",
+          value:hrv,
+          onChange:e=>onChangeHrv(e.target.value),
+          style:{width:"100%",borderColor:hrv?hrvColor:"var(--border)"}
+        }),
+        hrv&&h("div",{style:{marginTop:6,fontSize:11,color:hrvColor,fontWeight:700}},
+          hrv>=50?"✓ Récupération excellente — envoie fort !":
+          hrv>=30?"⚡ Récupération modérée — volume normal":"😴 Récupération faible — réduis l'intensité"
+        )
+      ),
+
+      // Zones FC visualisées si fc moy renseignée
+      fcMoy&&h("div",{style:{marginTop:14,padding:"10px 12px",background:`rgba(${fcMoy>=160?"255,59,92":fcMoy>=140?"255,140,66":fcMoy>=120?"10,132,255":"48,209,88"},.08)`,borderRadius:10,border:`1px solid rgba(${fcMoy>=160?"255,59,92":fcMoy>=140?"255,140,66":fcMoy>=120?"10,132,255":"48,209,88"},.2)`}},
+        h("div",{style:{fontSize:12,fontWeight:800,color:fcColor,marginBottom:4}},
+          fcMoy>=160?"Zone 4–5 🔥 Seuil / Maximum":
+          fcMoy>=140?"Zone 3–4 💪 Aérobie / Seuil":
+          fcMoy>=120?"Zone 2–3 ✓ Endurance":"Zone 1–2 🧘 Récupération"
+        ),
+        h("div",{style:{fontSize:11,color:"var(--dim)"}},`FC moyenne ${fcMoy} bpm · séance en zone ${fcMoy>=160?"4-5":fcMoy>=140?"3-4":fcMoy>=120?"2-3":"1-2"}`)
+      )
+    )
+  );
+}
+
 // ── TAB SÉANCE ──
 function TabSeance(){
   const DAYS=getDAYS();
@@ -856,8 +978,14 @@ function TabSeance(){
   const [extraGroups,setExtraGroups]=useState([]);
   const [runDuration,setRunDuration]=useState(0);
   const [runDist,setRunDist]=useState("");
-  const [timerOverlay,setTimerOverlay]=useState(null); // null or seconds
+  const [timerOverlay,setTimerOverlay]=useState(null);
   const [seanceSaved,setSeanceSaved]=useState(false);
+  // Apple Watch
+  const [watchFcMoy,setWatchFcMoy]=useState(()=>ls("watch_fc_moy",""));
+  const [watchFcMax,setWatchFcMax]=useState(()=>ls("watch_fc_max",""));
+  const [watchCals,setWatchCals]=useState(()=>ls("watch_cals",""));
+  const [watchHrv,setWatchHrv]=useState(()=>ls("watch_hrv",""));
+  const [watchDuree,setWatchDuree]=useState(()=>ls("watch_duree",""));
 
   const day=DAYS[selDay];
   const dk=useMemo(()=>getDayKey(selDay),[selDay]);
@@ -868,7 +996,26 @@ function TabSeance(){
     setRunDuration(ls(`run_dur_${dk}`,day.run?.duration||0));
     setRunDist(ls(`run_dist_${dk}`,""));
     setSeanceSaved(ls(`seance_saved_${dk}`,false));
+    setWatchFcMoy(ls(`watch_fc_moy_${dk}`,""));
+    setWatchFcMax(ls(`watch_fc_max_${dk}`,""));
+    setWatchCals(ls(`watch_cals_${dk}`,""));
+    setWatchHrv(ls(`watch_hrv_${dk}`,""));
+    setWatchDuree(ls(`watch_duree_${dk}`,""));
   },[dk]);
+
+  function saveWatch(field,val,setter){
+    setter(val);
+    lsSet(`watch_${field}_${dk}`,val);
+    // Sync HRV → Whoop score auto
+    if(field==="hrv"&&val){
+      const hrv=parseInt(val);
+      if(hrv>0){
+        // HRV : <20=rouge, 20-50=orange, >50=vert (approximation)
+        const score=Math.min(100,Math.round(hrv*1.8));
+        setWhoopScore(score);lsSet("whoop_today",score);
+      }
+    }
+  }
 
   function showToast(msg){setToast({msg,show:true});setTimeout(()=>setToast(p=>({...p,show:false})),2200);}
   function removeExtra(id){const upd=extraGroups.filter(g=>g.id!==id);setExtraGroups(upd);lsSet(`extra_${dk}`,upd);}
@@ -902,6 +1049,7 @@ function TabSeance(){
         return{muscle:LIB[g.muscle]?.label||g.muscle,name:ex.name,sets:sets.map(s=>({reps:s.reps,kg:s.kg,done:s.done}))};
       }),
       run:day.run&&runDone?{duration:runDuration,dist:runDist}:null,
+      watch:{fcMoy:watchFcMoy,fcMax:watchFcMax,cals:watchCals,hrv:watchHrv,duree:watchDuree},
       prog:prog.name
     };
     // Stocker dans historique
@@ -989,6 +1137,16 @@ function TabSeance(){
             h("div",{style:{fontSize:"11px",color:"var(--dim)",marginBottom:12}},`~${Math.round((runDuration||day.run.duration)/35*day.run.calsBurn)} kcal estimés`),
             h("button",{onClick:()=>{const nd=!runDone;setRunDone(nd);lsSet(`run_done_${dk}`,nd);showToast(nd?"Course validée ✓":"Course décochée");},style:{width:"100%",padding:"12px",background:runDone?"rgba(48,209,88,.12)":"rgba(255,59,92,.08)",border:`1.5px solid ${runDone?"rgba(48,209,88,.35)":"rgba(255,59,92,.25)"}`,borderRadius:10,color:runDone?"var(--green)":"var(--red)",fontWeight:800,fontSize:14,cursor:"pointer"}},runDone?"✓ Course terminée":"Marquer la course comme fait")
           ),
+
+          // APPLE WATCH PANEL
+          day.type!=="rest"&&h(WatchPanel,{
+            fcMoy:watchFcMoy,fcMax:watchFcMax,cals:watchCals,hrv:watchHrv,duree:watchDuree,
+            onChangeFcMoy:v=>saveWatch("fc_moy",v,setWatchFcMoy),
+            onChangeFcMax:v=>saveWatch("fc_max",v,setWatchFcMax),
+            onChangeCals:v=>saveWatch("cals",v,setWatchCals),
+            onChangeHrv:v=>saveWatch("hrv",v,setWatchHrv),
+            onChangeDuree:v=>saveWatch("duree",v,setWatchDuree),
+          }),
 
           // Exercises
           day.groups&&h("div",null,
@@ -1139,7 +1297,12 @@ function TabMensuel(){
         h("div",{style:{width:40,height:40,borderRadius:10,background:`rgba(48,209,88,.12)`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}},"✓"),
         h("div",{style:{flex:1,minWidth:0}},
           h("div",{style:{fontSize:13,fontWeight:700,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}},r.dayTitle),
-          h("div",{style:{fontSize:11,color:"var(--dim)",marginTop:2}},`${r.dateStr} · ${r.pct}% · ${r.cals} kcal · ${r.prog}`)
+          h("div",{style:{fontSize:11,color:"var(--dim)",marginTop:2}},
+            `${r.dateStr} · ${r.pct}% · ${r.cals} kcal`,
+            r.watch&&r.watch.fcMoy&&h("span",{style:{color:"#FF3B5C",marginLeft:6}},"🫀 "+r.watch.fcMoy+" bpm"),
+            r.watch&&r.watch.hrv&&h("span",{style:{color:"#BF5AF2",marginLeft:6}},"HRV "+r.watch.hrv),
+            h("span",{style:{color:"var(--dim2)",marginLeft:6}},r.prog)
+          )
         )
       ))
     ),
