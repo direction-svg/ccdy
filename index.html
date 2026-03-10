@@ -1142,7 +1142,116 @@ function TabMensuel(){
           h("div",{style:{fontSize:11,color:"var(--dim)",marginTop:2}},`${r.dateStr} · ${r.pct}% · ${r.cals} kcal · ${r.prog}`)
         )
       ))
+    ),
+
+    // ── SAISIE MANUELLE D'UNE SÉANCE PASSÉE ──
+    h(ManualSessionPanel,null)
+  );
+}
+
+// ── PANEL SAISIE MANUELLE ──
+function ManualSessionPanel(){
+  const [open,setOpen]=useState(false);
+  const [saved,setSaved]=useState(false);
+  const [dateStr,setDateStr]=useState(()=>{
+    const y=new Date();y.setDate(y.getDate()-1);
+    return y.toISOString().split("T")[0];
+  });
+  const [title,setTitle]=useState("Push — Pecs / Épaules / Triceps");
+  const [pct,setPct]=useState(100);
+  const [cals,setCals]=useState(132);
+  const [rows,setRows]=useState([
+    {muscle:"Pecs Haut",name:"Développé incliné haltères",sets:3,done:3},
+    {muscle:"Pecs Central",name:"Développé couché barre",sets:3,done:3},
+    {muscle:"Épaules",name:"Machine épaules",sets:3,done:3},
+    {muscle:"Triceps",name:"Poulie triceps corde",sets:3,done:3},
+    {muscle:"Pecs Haut",name:"Pec deck incliné",sets:3,done:3},
+    {muscle:"Pecs Central",name:"Câble fly croisé",sets:3,done:3},
+    {muscle:"Épaules",name:"Oiseau haltères",sets:3,done:3},
+  ]);
+
+  function addRow(){setRows(p=>[...p,{muscle:"",name:"",sets:3,done:3}]);}
+  function removeRow(i){setRows(p=>p.filter((_,j)=>j!==i));}
+  function updateRow(i,field,val){setRows(p=>{const n=[...p];n[i]={...n[i],[field]:val};return n;});}
+
+  function saveSession(){
+    const d=new Date(dateStr+"T12:00:00");
+    const prog=getProgram();
+    // Construire une clé unique basée sur la date
+    const dk=`manual_${dateStr}`;
+    const record={
+      date:d.toISOString(),
+      dateStr:d.toLocaleDateString("fr-FR"),
+      dayKey:dk,
+      dayTitle:title,
+      pct:parseInt(pct)||100,
+      cals:parseInt(cals)||0,
+      whoopScore:ls("whoop_today",67),
+      totalSets:rows.reduce((a,r)=>a+r.sets,0),
+      doneSets:rows.reduce((a,r)=>a+r.done,0),
+      exercises:rows.map(r=>({muscle:r.muscle,name:r.name,sets:Array.from({length:r.done},()=>({reps:10,kg:"",done:true}))})),
+      run:null,
+      prog:prog.name,
+      manual:true
+    };
+    // Marquer le jour comme sauvegardé dans le calendrier
+    lsSet(`seance_saved_${dk}`,true);
+    // Ajouter à l'historique
+    const hist=ls("seance_history",[]);
+    const filtered=hist.filter(r=>r.dayKey!==dk);
+    filtered.unshift(record);
+    lsSet("seance_history",filtered.slice(0,200));
+    setSaved(true);
+    setTimeout(()=>{setOpen(false);setSaved(false);},1500);
+  }
+
+  if(!open)return h("div",{className:"card",style:{marginTop:8}},
+    h("button",{onClick:()=>setOpen(true),style:{width:"100%",padding:"14px",background:"rgba(191,90,242,.08)",border:"1.5px dashed rgba(191,90,242,.3)",borderRadius:12,color:"var(--purple)",fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:10}},
+      "✏️ Saisir une séance passée manuellement"
     )
+  );
+
+  return h("div",{className:"card",style:{marginTop:8}},
+    h("div",{className:"card-header"},
+      h("span",{className:"card-title"},"✏️ Saisie manuelle"),
+      h("button",{onClick:()=>setOpen(false),style:{background:"none",color:"var(--dim)",fontSize:20,cursor:"pointer",padding:"4px 8px"}},"×")
+    ),
+
+    // Date + titre
+    h("div",{style:{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}},
+      h("div",null,
+        h("div",{style:{fontSize:10,color:"var(--dim)",fontWeight:700,marginBottom:5}},"DATE"),
+        h("input",{type:"date",className:"serie-input",value:dateStr,onChange:e=>setDateStr(e.target.value)})
+      ),
+      h("div",null,
+        h("div",{style:{fontSize:10,color:"var(--dim)",fontWeight:700,marginBottom:5}},"COMPLÉTION"),
+        h("input",{className:"serie-input",value:pct,inputMode:"numeric",onChange:e=>setPct(e.target.value),placeholder:"100"})
+      )
+    ),
+    h("div",{style:{marginBottom:12}},
+      h("div",{style:{fontSize:10,color:"var(--dim)",fontWeight:700,marginBottom:5}},"TITRE DE LA SÉANCE"),
+      h("input",{className:"serie-input",value:title,onChange:e=>setTitle(e.target.value),style:{width:"100%"}})
+    ),
+    h("div",{style:{marginBottom:12}},
+      h("div",{style:{fontSize:10,color:"var(--dim)",fontWeight:700,marginBottom:5}},"CALORIES BRÛLÉES"),
+      h("input",{className:"serie-input",value:cals,inputMode:"numeric",onChange:e=>setCals(e.target.value),placeholder:"132",style:{width:"100%"}})
+    ),
+
+    // Liste exercices
+    h("div",{style:{fontSize:10,color:"var(--dim)",fontWeight:700,marginBottom:8,textTransform:"uppercase",letterSpacing:".5px"}},"EXERCICES"),
+    rows.map((r,i)=>h("div",{key:i,style:{display:"grid",gridTemplateColumns:"1fr 1.8fr auto auto",gap:6,marginBottom:8,alignItems:"center"}},
+      h("input",{className:"serie-input",placeholder:"Muscle",value:r.muscle,onChange:e=>updateRow(i,"muscle",e.target.value),style:{fontSize:11}}),
+      h("input",{className:"serie-input",placeholder:"Exercice",value:r.name,onChange:e=>updateRow(i,"name",e.target.value),style:{fontSize:11}}),
+      h("input",{className:"serie-input",placeholder:"S",value:r.sets,inputMode:"numeric",onChange:e=>updateRow(i,"sets",parseInt(e.target.value)||3),style:{width:40,textAlign:"center",fontSize:11}}),
+      h("button",{onClick:()=>removeRow(i),style:{width:32,height:36,background:"none",color:"var(--red)",fontSize:16,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}},"×")
+    )),
+    h("button",{onClick:addRow,style:{width:"100%",padding:"9px",marginBottom:14,background:"rgba(191,90,242,.06)",border:"1.5px dashed rgba(191,90,242,.25)",borderRadius:8,color:"var(--purple)",fontWeight:700,fontSize:12,cursor:"pointer"}},"+ Ajouter un exercice"),
+
+    saved
+      ?h("div",{style:{padding:"14px",background:"rgba(48,209,88,.12)",border:"1.5px solid rgba(48,209,88,.3)",borderRadius:12,color:"var(--green)",fontWeight:800,fontSize:14,textAlign:"center"}},"✓ Séance enregistrée !")
+      :h("button",{onClick:saveSession,style:{width:"100%",padding:"14px",background:"linear-gradient(135deg,rgba(48,209,88,.2),rgba(48,209,88,.08))",border:"1.5px solid rgba(48,209,88,.4)",borderRadius:12,color:"var(--green)",fontWeight:900,fontSize:15,cursor:"pointer"}},
+        "💾 Enregistrer cette séance"
+      )
   );
 }
 
@@ -1150,7 +1259,32 @@ function TabMensuel(){
 function TabHealth(){
   const [age,setAge]=useState(()=>ls("age",46));
   const fcmax=220-age;
+  const fileRef=useRef(null);
+  const [importMsg,setImportMsg]=useState("");
   function updateAge(v){const a=parseInt(v)||46;setAge(a);lsSet("age",a);}
+
+  function exportData(){
+    const data={};
+    for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);try{data[k]=JSON.parse(localStorage.getItem(k));}catch{data[k]=localStorage.getItem(k);}}
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement("a");a.href=url;
+    const d=new Date();a.download=`workout-backup-${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}.json`;
+    a.click();URL.revokeObjectURL(url);
+  }
+  function importData(e){
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=ev=>{
+      try{
+        const data=JSON.parse(ev.target.result);let count=0;
+        Object.entries(data).forEach(([k,v])=>{localStorage.setItem(k,typeof v==="string"?v:JSON.stringify(v));count++;});
+        setImportMsg(`✓ ${count} entrées restaurées !`);
+        setTimeout(()=>window.location.reload(),1200);
+      }catch{setImportMsg("❌ Fichier invalide.");}
+    };reader.readAsText(file);
+  }
+
   const zones=[
     {z:1,name:"Z1 Récupération",range:"<60%",bpm:`<${Math.round(fcmax*.6)}`,color:"#4A5568",desc:"Marche légère, récupération active"},
     {z:2,name:"Z2 Endurance",range:"60–70%",bpm:`${Math.round(fcmax*.6)}–${Math.round(fcmax*.7)}`,color:"#30D158",desc:"Cardio de base, combustion lipides, Zone 2"},
@@ -1162,7 +1296,18 @@ function TabHealth(){
   const phase=getProgPhase();
   const phaseNames=["Janv–Avril","Fév–Mai","Mar–Juin"];
   return h("div",{className:"page safe-bot"},
-    h("div",{style:{fontSize:"20px",fontWeight:900,marginBottom:16}},"❤️ Zones & Programme"),
+    h("div",{style:{fontSize:"20px",fontWeight:900,marginBottom:16}},"❤️ Zones & Paramètres"),
+
+    // Backup card
+    h("div",{className:"card"},
+      h("div",{className:"card-header"},h("span",{className:"card-title"},"💾 Sauvegarde")),
+      h("div",{style:{fontSize:12,color:"var(--dim)",marginBottom:12,lineHeight:1.5}},"Exporte toutes tes données avant de mettre à jour l'app."),
+      h("button",{onClick:exportData,style:{width:"100%",padding:"13px",marginBottom:8,background:"rgba(48,209,88,.1)",border:"1.5px solid rgba(48,209,88,.3)",borderRadius:12,color:"var(--green)",fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}},"⬇️ Exporter mes données (JSON)"),
+      h("input",{type:"file",accept:".json",ref:fileRef,style:{display:"none"},onChange:importData}),
+      h("button",{onClick:()=>fileRef.current&&fileRef.current.click(),style:{width:"100%",padding:"13px",background:"rgba(10,132,255,.08)",border:"1.5px solid rgba(10,132,255,.2)",borderRadius:12,color:"var(--blue)",fontWeight:800,fontSize:14,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:8}},"⬆️ Importer un backup"),
+      importMsg&&h("div",{style:{marginTop:8,padding:"10px",background:"rgba(48,209,88,.1)",borderRadius:8,fontSize:13,fontWeight:700,color:"var(--green)",textAlign:"center"}},importMsg)
+    ),
+
     h("div",{className:"card"},
       h("div",{className:"card-header"},h("span",{className:"card-title"},"📅 Programme actif")),
       h("div",{style:{padding:"4px 0 8px"}},
