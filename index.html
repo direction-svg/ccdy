@@ -415,6 +415,7 @@ body.has-fullscreen .tabs { display:none }
     </label>
   </div>
 </div>
+<div id="debugStorageBanner" style="display:none;padding:6px 1.5rem;font-size:11px;font-family:'DM Sans',sans-serif;color:#fff;font-weight:500;position:sticky;top:60px;z-index:280"></div>
 
 <!-- TABS -->
 <div class="tabs">
@@ -3187,6 +3188,32 @@ function destroyChart(k){if(charts[k]){charts[k].destroy();delete charts[k];}}
 
 
 <script>
+
+// ══════════════════════════════════════════════════════════════
+// DEBUG PERSISTANCE — affiche l'état du localStorage
+// ══════════════════════════════════════════════════════════════
+function debugStorage(){
+  const banner = document.getElementById('debugStorageBanner');
+  if(!banner) return;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const ver = localStorage.getItem(STORAGE_KEY+'_version');
+    if(!raw){
+      banner.style.background='#b91c1c';
+      banner.textContent='⚠️ localStorage VIDE — clé: '+STORAGE_KEY+' | version sauvée: '+(ver||'aucune')+' | version code: '+STORAGE_VERSION;
+    } else {
+      const data = JSON.parse(raw);
+      banner.style.background='#15803d';
+      banner.textContent='💾 localStorage OK — '+( data.rows||[]).length+' pointages · '+(data.conges||[]).length+' congés · '+(data.fichiers||[]).length+' fichiers';
+    }
+    banner.style.display='block';
+  } catch(e){
+    banner.style.background='#b91c1c';
+    banner.textContent='❌ localStorage ERREUR: '+e.message;
+    banner.style.display='block';
+  }
+}
+
 // ══════════════════════════════════════════════════════════════
 // RESTAURATION AU DÉMARRAGE
 // ══════════════════════════════════════════════════════════════
@@ -3219,6 +3246,7 @@ function destroyChart(k){if(charts[k]){charts[k].destroy();delete charts[k];}}
     setTimeout(()=>{ banner.style.opacity='0'; }, 3500);
     setTimeout(()=>{ banner.remove(); }, 4100);
   }
+  debugStorage();
 })();
 </script>
 
